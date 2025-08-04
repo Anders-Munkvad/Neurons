@@ -1,7 +1,8 @@
 import fitz  # PyMuPDF
+from io import BytesIO
 
 def extract_font_styles(pdf_path):
-    doc = fitz.open(pdf_path)
+    doc = fitz.open(stream=BytesIO(pdf_path), filetype="pdf")
     font_styles = {}
 
     for page in doc:
@@ -18,7 +19,7 @@ def extract_font_styles(pdf_path):
     return font_styles
 
 def extract_logo_safezone_styles(pdf_path):
-    doc = fitz.open(pdf_path)
+    doc = fitz.open(stream=BytesIO(pdf_path), filetype="pdf")
     logo_safezone = {}
 
     for page in doc:
@@ -58,7 +59,7 @@ def extract_logo_safezone_styles(pdf_path):
     return logo_safezone
 
 def extract_logo_colours(pdf_path):
-    doc = fitz.open(pdf_path)
+    doc = fitz.open(stream=BytesIO(pdf_path), filetype="pdf")
     logo_colour = {"Logo colours": []}
 
     for page in doc:
@@ -75,7 +76,7 @@ def extract_logo_colours(pdf_path):
     return logo_colour
 
 def extract_palette_styles(pdf_path):
-    doc = fitz.open(pdf_path)
+    doc = fitz.open(stream=BytesIO(pdf_path), filetype="pdf")
     logo_colour_palette = {"Colours": []}
 
     for page in doc:
@@ -92,10 +93,10 @@ def extract_palette_styles(pdf_path):
 
 # The function that will be used in the API
 # Make it more readable what each is? Just return a string along with it?
-def extract_brand_compliance(pdf_path):
+def extract_brand_compliance(pdf_bytes):
     return {
-        "font_styles": extract_font_styles(pdf_path),
-        "logo_safezone": extract_logo_safezone_styles(pdf_path),
-        "logo_colour": extract_logo_colours(pdf_path),
-        "logo_colour_palette": extract_palette_styles(pdf_path)
+        "font_styles": extract_font_styles(pdf_bytes),
+        "logo_safezone": extract_logo_safezone_styles(pdf_bytes),
+        "logo_colour": extract_logo_colours(pdf_bytes),
+        "logo_colour_palette": extract_palette_styles(pdf_bytes)
     }
