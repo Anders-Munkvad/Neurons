@@ -1,39 +1,38 @@
-# Model: https://huggingface.co/llava-hf/llava-1.5-7b-hf
+import openai
+from pathlib import Path
+from dotenv import load_dotenv
+import os
+import base64
 
-from transformers import AutoProcessor, AutoModelForVision2Seq
-from PIL import Image
-import torch
+# Load variables from .env
+load_dotenv()
 
-class LLaVAEngine:
-    def __init__(self, model_id="llava-hf/llava-1.5-7b-hf", revision="a272c74"):
-        self.processor = AutoProcessor.from_pretrained(model_id, revision=revision)
-        self.model = AutoModelForVision2Seq.from_pretrained(model_id, revision=revision)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
+# Set API key
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    def evaluate(self, prompt: str, image: Image.Image, max_new_tokens: int = 512) -> str:
-        # 🧠 LLaVA requires <image> token in the prompt itself
-        prompt_with_image_token = f"<image>\n[INST] {prompt} [/INST]"
+def GPT_4o_response(image_bytes: bytes, prompt: str) -> str:
+    # Encode image as base64
+    encoded_image = base64.b64encode(image_bytes).decode("utf-8")
 
-        # 🛠️ Tokenize text + image at the same time
-        inputs = self.processor(
-            text=prompt_with_image_token,
-            images=image,
-            return_tensors="pt"
-        )
+    response = openai.ChatCompletion.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{encoded_image}",
+                            "detail": "high"
+                        }
+                    }
+                ]
+            }
+        ],
+        max_tokens=1024,
+        temperature=0.2,
+    )
 
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
-
-        # 🔁 Generate
-        output_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
-
-        # 🧼 Decode
-        response = self.processor.tokenizer.batch_decode(
-            output_ids[:, inputs["input_ids"].shape[-1]:],
-            skip_special_tokens=True
-        )[0]
-
-        return response
-
-
-
+    return response.choices[0].message["content"]
