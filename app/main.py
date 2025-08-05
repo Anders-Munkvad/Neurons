@@ -1,6 +1,8 @@
 from fastapi import FastAPI, UploadFile, File
+import tempfile
 
 from extract_pdf import extract_brand_compliance
+from compliance_prompt import build_compliance_prompt
 
 app = FastAPI()
 
@@ -8,10 +10,37 @@ app = FastAPI()
 def home():
     return {"message": "Brand Compliance API is running"}
 
-
-# curl -X POST http://127.0.0.1:8000/extract_brand_compliance -F "file=@C:\Users\ander\OneDrive - University of Copenhagen\Desktop\Neurons\Neurons_brand_kit.pdf"
+# API function to extract brand compliance information from the PDF.
+# Testing can be done by requesting the following to the API: curl -X POST http://127.0.0.1:8000/extract_brand_compliance -F "file=@C:\Users\ander\OneDrive - University of Copenhagen\Desktop\Neurons\Neurons_brand_kit.pdf"
 @app.post("/extract_brand_compliance")
 async def upload_pdf(file: UploadFile = File(...)):
     contents = await file.read()  # this gives you raw bytes
     results = extract_brand_compliance(contents)  # pass only the bytes
     return {"Requirements": results, "message": "Requirements"}
+
+# Test: curl -X POST http://127.0.0.1:8000/extract_brand_compliance -F "file=@C:\Users\ander\OneDrive - University of Copenhagen\Desktop\Neurons\Neurons_brand_kit.pdf"
+@app.post("/build_compliance_prompt")
+async def upload_pdf(file: UploadFile = File(...)):
+    contents = await file.read()  # raw bytes from PDF
+    compliance_data = extract_brand_compliance(contents)  # your updated version that handles bytes
+    prompt = build_compliance_prompt(compliance_data)     # build string prompt from dict
+    return {
+        "Prompt": prompt,
+        "message": "Brand compliance prompt successfully generated."
+    }
+
+
+# Function to upload an image - we need to create a function first that can evaluate the image
+# @app.post("/upload_image")
+# async def upload_pdf(file: UploadFile = File(...)):
+#     # Step 1: Upload image
+
+#     # Step 2: Process image
+
+#     # Step 3: return
+
+#     # Considerations: Just upload image or do we just create a single pipeline
+
+#     #contents = await file.read()  # this gives you raw bytes
+#     #results = extract_brand_compliance(contents)  # pass only the bytes
+#     #return {"Requirements": results, "message": "Requirements"}
