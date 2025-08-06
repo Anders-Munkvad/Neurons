@@ -1,20 +1,21 @@
-import openai
+from openai import OpenAI
+import base64
+import os
 from pathlib import Path
 from dotenv import load_dotenv
-import os
-import base64
 
-# Load variables from .env
-load_dotenv()
+# Load .env from parent directory
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
-# Set API key
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Safe to access the environment variable
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def GPT_4o_response(image_bytes: bytes, prompt: str) -> str:
-    # Encode image as base64
+    # Encode image to base64
     encoded_image = base64.b64encode(image_bytes).decode("utf-8")
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {
@@ -35,4 +36,4 @@ def GPT_4o_response(image_bytes: bytes, prompt: str) -> str:
         temperature=0.2,
     )
 
-    return response.choices[0].message["content"]
+    return response.choices[0].message.content

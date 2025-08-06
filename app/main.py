@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
-from image_evaluation import LLaVAEngine
+from image_evaluation import GPT_4o_response
 from PIL import Image
 from io import BytesIO
 
@@ -31,33 +31,53 @@ async def upload_pdf(file: UploadFile = File(...)):
         "message": "Brand compliance prompt successfully generated."
     }
 
-llava_engine = None
+#llava_engine = None
 
-@app.on_event("startup")
-def load_model():
-    global llava_engine
-    llava_engine = LLaVAEngine()
+#@app.on_event("startup")
+#def load_model():
+#    global llava_engine
+#    llava_engine = LLaVAEngine()
 
 
-# Test: curl -X POST http://127.0.0.1:8000/evaluate_brand_compliance -F "brand_kit=@C:\Users\ander\OneDrive - University of Copenhagen\Desktop\Neurons\Neurons_brand_kit.pdf" -F "image_file=@C:\Users\ander\OneDrive - University of Copenhagen\Desktop\Neurons\neurons_1.png"
-@app.post("/evaluate_brand_compliance")
+# Test: curl -X POST http://127.0.0.1:8000/evaluate_brand_compliance_wAPI -F "brand_kit=@C:\Users\ander\OneDrive - University of Copenhagen\Desktop\Neurons\Neurons_brand_kit.pdf" -F "image_file=@C:\Users\ander\OneDrive - University of Copenhagen\Desktop\Neurons\neurons_1.png"
+@app.post("/evaluate_brand_compliance_wAPI")
 async def evaluate_brand_compliance(
     brand_kit: UploadFile = File(...),
     image_file: UploadFile = File(...)
 ):
-    global llava_engine
     brand_bytes = await brand_kit.read()
     image_bytes = await image_file.read()
     image = Image.open(BytesIO(image_bytes)).convert("RGB")
 
     brand_data = extract_brand_compliance(brand_bytes)
     prompt = build_compliance_prompt(brand_data)
-    response = llava_engine.evaluate(prompt, image)
+    # Call openai api
+    response = GPT_4o_response(image_bytes, prompt)
 
     return {
         "prompt_used": prompt,
         "model_output": response
     }
+
+# Test: curl -X POST http://127.0.0.1:8000/evaluate_brand_compliance -F "brand_kit=@C:\Users\ander\OneDrive - University of Copenhagen\Desktop\Neurons\Neurons_brand_kit.pdf" -F "image_file=@C:\Users\ander\OneDrive - University of Copenhagen\Desktop\Neurons\neurons_1.png"
+# @app.post("/evaluate_brand_compliance")
+# async def evaluate_brand_compliance(
+#     brand_kit: UploadFile = File(...),
+#     image_file: UploadFile = File(...)
+# ):
+#     global llava_engine
+#     brand_bytes = await brand_kit.read()
+#     image_bytes = await image_file.read()
+#     image = Image.open(BytesIO(image_bytes)).convert("RGB")
+
+#     brand_data = extract_brand_compliance(brand_bytes)
+#     prompt = build_compliance_prompt(brand_data)
+#     response = llava_engine.evaluate(prompt, image)
+
+#     return {
+#         "prompt_used": prompt,
+#         "model_output": response
+#     }
 
 # Function to upload an image - we need to create a function first that can evaluate the image
 # @app.post("/upload_image")
