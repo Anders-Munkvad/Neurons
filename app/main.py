@@ -1,11 +1,13 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from image_evaluation import GPT_4o_response
 from PIL import Image
 from io import BytesIO
-
+from fastapi import Form
 from extract_pdf import extract_brand_compliance
 from compliance_prompt import build_compliance_prompt
+import logging
 
+logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
 @app.get("/")
@@ -43,53 +45,29 @@ async def upload_pdf(file: UploadFile = File(...)):
 @app.post("/evaluate_brand_compliance_wAPI")
 async def evaluate_brand_compliance(
     brand_kit: UploadFile = File(...),
-    image_file: UploadFile = File(...)
+    image_file: UploadFile = File(...),
+    model_name: str = Form(...)
 ):
     brand_bytes = await brand_kit.read()
     image_bytes = await image_file.read()
-    image = Image.open(BytesIO(image_bytes)).convert("RGB")
 
     brand_data = extract_brand_compliance(brand_bytes)
-    prompt = build_compliance_prompt(brand_data)
-    # Call openai api
-    response = GPT_4o_response(image_bytes, prompt)
 
-    return {
+    prompt = None
+    response = None
+
+    if model_name == "ChatGPT-4o":
+        prompt = build_compliance_prompt(brand_data)
+        response = GPT_4o_response(image_bytes, prompt)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown model: {model_name}")
+
+    result = {
         "prompt_used": prompt,
         "model_output": response
     }
 
-# Test: curl -X POST http://127.0.0.1:8000/evaluate_brand_compliance -F "brand_kit=@C:\Users\ander\OneDrive - University of Copenhagen\Desktop\Neurons\Neurons_brand_kit.pdf" -F "image_file=@C:\Users\ander\OneDrive - University of Copenhagen\Desktop\Neurons\neurons_1.png"
-# @app.post("/evaluate_brand_compliance")
-# async def evaluate_brand_compliance(
-#     brand_kit: UploadFile = File(...),
-#     image_file: UploadFile = File(...)
-# ):
-#     global llava_engine
-#     brand_bytes = await brand_kit.read()
-#     image_bytes = await image_file.read()
-#     image = Image.open(BytesIO(image_bytes)).convert("RGB")
+    # Log to console so you see exactly what’s being returned
+    logging.info(f"Returning API response: {result}")
 
-#     brand_data = extract_brand_compliance(brand_bytes)
-#     prompt = build_compliance_prompt(brand_data)
-#     response = llava_engine.evaluate(prompt, image)
-
-#     return {
-#         "prompt_used": prompt,
-#         "model_output": response
-#     }
-
-# Function to upload an image - we need to create a function first that can evaluate the image
-# @app.post("/upload_image")
-# async def upload_pdf(file: UploadFile = File(...)):
-#     # Step 1: Upload image
-
-#     # Step 2: Process image
-
-#     # Step 3: return
-
-#     # Considerations: Just upload image or do we just create a single pipeline
-
-#     #contents = await file.read()  # this gives you raw bytes
-#     #results = extract_brand_compliance(contents)  # pass only the bytes
-#     #return {"Requirements": results, "message": "Requirements"}
+    return result
